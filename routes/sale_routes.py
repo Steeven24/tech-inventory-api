@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from core.database import get_db
-from routes.auth_routes import get_current_user
+from routes.auth_routes import require_roles
 from schemas.sale_schema import SaleCreate, SaleResponse
 from services.sale_service import SaleService
 
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/sales", tags=["Sales"])
 def create_sale(
     sale_data: SaleCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_roles("admin", "seller")),
 ):
     sale_service = SaleService(db)
     try:
@@ -23,13 +23,17 @@ def create_sale(
 
 
 @router.get("", response_model=list[SaleResponse])
-def get_sales(db: Session = Depends(get_db), _=Depends(get_current_user)):
+def get_sales(db: Session = Depends(get_db), _=Depends(require_roles("admin", "seller"))):
     sale_service = SaleService(db)
     return sale_service.get_sales()
 
 
 @router.get("/{sale_id}", response_model=SaleResponse)
-def get_sale(sale_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def get_sale(
+    sale_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_roles("admin", "seller")),
+):
     sale_service = SaleService(db)
     sale = sale_service.get_sale_by_id(sale_id)
     if sale is None:
