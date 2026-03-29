@@ -13,7 +13,8 @@ router = APIRouter(prefix="/users", tags=["Users"])
 def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
     user_service = UserService(db)
     try:
-        return user_service.create_user(user_data)
+        safe_user_data = user_data.model_copy(update={"role": "seller"})
+        return user_service.create_user(safe_user_data)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
