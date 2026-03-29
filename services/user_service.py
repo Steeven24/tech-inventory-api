@@ -21,6 +21,7 @@ class UserService:
             "id": user.id,
             "name": user.name,
             "email": user.email,
+            "role": user.role,
         }
 
     def email_exists(self, email: str, exclude_user_id: int | None = None) -> bool:
@@ -41,6 +42,7 @@ class UserService:
             name=user_data.name,
             email=user_data.email,
             password=hashed_password,
+            role=user_data.role,
         )
         self.db.add(user)
         self.db.commit()
@@ -85,6 +87,9 @@ class UserService:
 
         if user_data.password is not None:
             user.password = self.hash_password(user_data.password)
+
+        if user_data.role is not None:
+            user.role = user_data.role
 
         self.db.commit()
         self.db.refresh(user)

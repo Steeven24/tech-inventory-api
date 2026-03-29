@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from core.database import get_db
-from routes.auth_routes import get_current_user
+from routes.auth_routes import get_current_user, require_roles
 from schemas.product_schema import ProductCreate, ProductResponse, ProductUpdate
 from services.product_service import ProductService
 
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/products", tags=["Products"])
 def create_product(
     product_data: ProductCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_roles("admin", "warehouse")),
 ):
     product_service = ProductService(db)
     try:
@@ -42,7 +42,7 @@ def update_product(
     product_id: int,
     product_data: ProductUpdate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_roles("admin", "warehouse")),
 ):
     product_service = ProductService(db)
     try:
@@ -56,7 +56,11 @@ def update_product(
 
 
 @router.delete("/{product_id}")
-def delete_product(product_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def delete_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_roles("admin", "warehouse")),
+):
     product_service = ProductService(db)
     deleted = product_service.delete_product(product_id)
     if not deleted:

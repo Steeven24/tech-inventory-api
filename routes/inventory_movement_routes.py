@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from core.database import get_db
-from routes.auth_routes import get_current_user
+from routes.auth_routes import require_roles
 from schemas.inventory_movement_schema import (
     InventoryMovementCreate,
     InventoryMovementResponse,
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/inventory-movements", tags=["Inventory Movements"])
 def create_inventory_movement(
     movement_data: InventoryMovementCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_roles("admin", "warehouse")),
 ):
     movement_service = InventoryMovementService(db)
     try:
@@ -26,7 +26,10 @@ def create_inventory_movement(
 
 
 @router.get("", response_model=list[InventoryMovementResponse])
-def get_inventory_movements(db: Session = Depends(get_db), _=Depends(get_current_user)):
+def get_inventory_movements(
+    db: Session = Depends(get_db),
+    _=Depends(require_roles("admin", "warehouse")),
+):
     movement_service = InventoryMovementService(db)
     return movement_service.get_movements()
 
@@ -35,7 +38,7 @@ def get_inventory_movements(db: Session = Depends(get_db), _=Depends(get_current
 def get_inventory_movement(
     movement_id: int,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_roles("admin", "warehouse")),
 ):
     movement_service = InventoryMovementService(db)
     movement = movement_service.get_movement_by_id(movement_id)
@@ -48,7 +51,7 @@ def get_inventory_movement(
 def get_inventory_movements_by_product(
     product_id: int,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_roles("admin", "warehouse")),
 ):
     movement_service = InventoryMovementService(db)
     return movement_service.get_movements_by_product(product_id)

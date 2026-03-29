@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from core.database import Base, engine
+from core.database import Base, engine, ensure_user_role_column
 from models.inventory_movement_model import InventoryMovement
 from models.product_model import Product
 from models.sale_model import Sale, SaleItem
@@ -14,6 +14,7 @@ from routes.user_routes import router as user_router
 app = FastAPI()
 
 Base.metadata.create_all(bind=engine)
+ensure_user_role_column()
 
 app.include_router(user_router)
 app.include_router(auth_router)
