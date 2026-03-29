@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from database import get_db
+from core.database import get_db
+from routes.auth_routes import get_current_user
 from schemas.user_schema import UserCreate, UserResponse, UserUpdate
 from services.user_service import UserService
 
@@ -18,13 +19,13 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.get("", response_model=list[UserResponse])
-def get_users(db: Session = Depends(get_db)):
+def get_users(db: Session = Depends(get_db), _=Depends(get_current_user)):
     user_service = UserService(db)
     return user_service.get_users()
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-def get_user(user_id: int, db: Session = Depends(get_db)):
+def get_user(user_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
     user_service = UserService(db)
     user = user_service.get_user_by_id(user_id)
     if user is None:
@@ -33,7 +34,12 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{user_id}", response_model=UserResponse)
-def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends(get_db)):
+def update_user(
+    user_id: int,
+    user_data: UserUpdate,
+    db: Session = Depends(get_db),
+    _=Depends(get_current_user),
+):
     user_service = UserService(db)
     try:
         user = user_service.update_user(user_id, user_data)
@@ -46,7 +52,7 @@ def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends(get_d
 
 
 @router.delete("/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+def delete_user(user_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
     user_service = UserService(db)
     deleted = user_service.delete_user(user_id)
     if not deleted:
