@@ -1,11 +1,13 @@
 from conftest import get_auth_headers
 
+API_PREFIX = "/api/v1"
+
 
 def test_inventory_and_sales_flow(client, admin_user):
     admin_headers = get_auth_headers(client, admin_user.email, "Admin123!")
 
     create_product_response = client.post(
-        "/products",
+        f"{API_PREFIX}/products",
         headers=admin_headers,
         json={
             "name": "Gaming Laptop",
@@ -20,7 +22,7 @@ def test_inventory_and_sales_flow(client, admin_user):
     product_id = create_product_response.json()["id"]
 
     movement_response = client.post(
-        "/inventory-movements",
+        f"{API_PREFIX}/inventory-movements",
         headers=admin_headers,
         json={
             "product_id": product_id,
@@ -31,12 +33,12 @@ def test_inventory_and_sales_flow(client, admin_user):
     )
     assert movement_response.status_code == 201
 
-    product_after_restock = client.get(f"/products/{product_id}", headers=admin_headers)
+    product_after_restock = client.get(f"{API_PREFIX}/products/{product_id}", headers=admin_headers)
     assert product_after_restock.status_code == 200
     assert product_after_restock.json()["stock"] == 15
 
     sale_response = client.post(
-        "/sales",
+        f"{API_PREFIX}/sales",
         headers=admin_headers,
         json={
             "discount": 100.0,
@@ -53,12 +55,12 @@ def test_inventory_and_sales_flow(client, admin_user):
     assert sale_payload["subtotal"] == 3000.0
     assert sale_payload["total"] == 2900.0
 
-    product_after_sale = client.get(f"/products/{product_id}", headers=admin_headers)
+    product_after_sale = client.get(f"{API_PREFIX}/products/{product_id}", headers=admin_headers)
     assert product_after_sale.status_code == 200
     assert product_after_sale.json()["stock"] == 13
 
     movement_history = client.get(
-        f"/inventory-movements/product/{product_id}",
+        f"{API_PREFIX}/inventory-movements/product/{product_id}",
         headers=admin_headers,
     )
     assert movement_history.status_code == 200
@@ -69,7 +71,7 @@ def test_sale_fails_with_insufficient_stock(client, admin_user):
     admin_headers = get_auth_headers(client, admin_user.email, "Admin123!")
 
     create_product_response = client.post(
-        "/products",
+        f"{API_PREFIX}/products",
         headers=admin_headers,
         json={
             "name": "Console",
@@ -83,7 +85,7 @@ def test_sale_fails_with_insufficient_stock(client, admin_user):
     product_id = create_product_response.json()["id"]
 
     sale_response = client.post(
-        "/sales",
+        f"{API_PREFIX}/sales",
         headers=admin_headers,
         json={
             "discount": 0,
