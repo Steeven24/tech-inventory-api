@@ -5,430 +5,853 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-336791?style=for-the-badge&logo=postgresql)](https://www.postgresql.org)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-d52b1e?style=for-the-badge)](https://www.sqlalchemy.org)
 
-RESTful API profesional para gestión integral de inventario y ventas de productos tecnológicos (teléfonos, computadoras, consolas). Construida con FastAPI, PostgreSQL y SQLAlchemy con autenticación JWT incluida.
+A production-oriented RESTful API for managing inventory, stock movements, and sales of technology products (phones, computers, and consoles), built with FastAPI, PostgreSQL, and SQLAlchemy.
 
-## 🚀 Características Principales
+## Table of Contents
 
-### ✅ Autenticación y Autorización
-- Registro y login de usuarios con JWT
-- Contraseñas hasheadas con bcrypt
-- Endpoints protegidos con Bearer tokens
-- Profiler de usuario autenticado
+- [Overview](#overview)
+- [Business Scope](#business-scope)
+- [Feature Set](#feature-set)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Quick Start](#quick-start)
+- [Environment Variables](#environment-variables)
+- [Run the API](#run-the-api)
+- [Authentication](#authentication)
+- [Role and Permission Matrix](#role-and-permission-matrix)
+- [API Endpoints](#api-endpoints)
+- [Business Rules](#business-rules)
+- [Reports and Dashboard](#reports-and-dashboard)
+- [Response and Error Conventions](#response-and-error-conventions)
+- [Operational Notes](#operational-notes)
+- [Troubleshooting](#troubleshooting)
+- [Roadmap](#roadmap)
+- [Author](#author)
 
-### ✅ Gestión de Productos
-- CRUD completo de productos
-- Atributos: nombre, categoría, marca, SKU único, precio, stock
-- Validación de SKU duplicado
-- Filtrado y búsqueda de productos
+## Overview
 
-### ✅ Gestión de Inventario
-- Registro de movimientos de entrada/salida (kardex)
-- Actualización automática de stock
-- Validación de stock disponible antes de salida
-- Historial trazable de movimientos por producto
+Tech Inventory API centralizes operational workflows for a small-to-medium technology business:
+- User authentication and access control
+- Product catalog and stock lifecycle
+- Sales registration with inventory impact
+- Reporting for daily operations and decision-making
 
-### ✅ Gestión de Ventas
-- Creación de ventas con múltiples ítems
-- Descuento aplicable a nivel de venta
-- Cálculo automático de subtotal y total
-- Actualización automática de stock al vender
-- Registro automático de movimiento de salida de inventario
-- Detalle completo de cada venta
+The API uses a clear layered structure (routes -> services -> models), enforcing business constraints like SKU uniqueness, role permissions, and stock integrity.
 
-## 📋 Requisitos Previos
+## Business Scope
 
-- **Python**: 3.11+
-- **PostgreSQL**: 12+
-- **pip**: Gestor de paquetes Python
-- **Virtualenv** (recomendado)
+This backend supports end-to-end inventory and sales operations:
+- Product onboarding and maintenance
+- Incoming and outgoing inventory movements
+- Sales transactions with multiple line items
+- Dashboard KPIs and report queries
+- Segregation of duties through roles: admin, seller, warehouse
 
-## 🔧 Instalación
+## Feature Set
 
-### 1. Clonar el repositorio
+### Authentication and Authorization
+- Public signup and secure login
+- JWT access token flow (Bearer)
+- Password hashing with bcrypt (passlib)
+- Role-based access control via reusable permission dependency
+
+### User Management
+- CRUD operations for users
+- Roles: admin, seller, warehouse
+- Public signup hardening: role is always forced to seller
+
+### Product Management
+- Product CRUD
+- Unique SKU validation
+- Required fields: name, category, brand, SKU, price, stock
+
+### Inventory Movements
+- Manual stock movement registration (in/out)
+- Validation to prevent negative stock
+- Product-level movement history
+
+### Sales
+- Multi-item sales creation
+- Discount support at sale level
+- Automatic subtotal and total calculation
+- Automatic stock deduction per sale item
+- Automatic out inventory movement audit per sale line
+
+### Reports and Dashboard
+- Sales summary by date range
+- Top-selling products by quantity and revenue
+- Low stock report with configurable threshold
+- Dashboard overview metrics
+
+## Architecture
+
+Layered architecture:
+- routes/: HTTP contracts, dependencies, authorization policy
+- services/: business logic and domain validation
+- models/: SQLAlchemy persistence models
+- schemas/: request and response contracts (Pydantic)
+- core/: database/session setup and JWT utilities
+
+Design principles:
+- Thin routes, explicit service layer
+- Clear separation between persistence and API contracts
+- Role checks at route boundaries
+- Inventory traceability through movement records
+
+## Tech Stack
+
+- Python 3.13+
+- FastAPI
+- PostgreSQL
+- SQLAlchemy
+- Pydantic
+- python-jose (JWT)
+- passlib (bcrypt)
+- python-dotenv
+- uvicorn
+
+## Project Structure
+
+```text
+tech-inventory-api/
+├── main.py
+├── requirements.txt
+├── .env.example
+├── README.md
+├── core/
+│   ├── database.py
+│   └── security.py
+├── models/
+│   ├── user_model.py
+│   ├── product_model.py
+│   ├── inventory_movement_model.py
+│   └── sale_model.py
+├── schemas/
+│   ├── auth_schema.py
+│   ├── user_schema.py
+│   ├── product_schema.py
+│   ├── inventory_movement_schema.py
+│   ├── sale_schema.py
+│   └── report_schema.py
+├── services/
+│   ├── user_service.py
+│   ├── product_service.py
+│   ├── inventory_movement_service.py
+│   ├── sale_service.py
+│   └── report_service.py
+└── routes/
+        ├── auth_routes.py
+        ├── user_routes.py
+        ├── product_routes.py
+        ├── inventory_movement_routes.py
+        ├── sale_routes.py
+        └── report_routes.py
+```
+
+## Quick Start
+
+### 1. Clone repository
 
 ```bash
 git clone https://github.com/Steeven24/tech-inventory-api.git
 cd tech-inventory-api
 ```
 
-### 2. Crear entorno virtual
+### 2. Create and activate virtual environment
 
+Windows:
 ```bash
 python -m venv venv
-```
-
-### 3. Activar entorno virtual
-
-**Windows:**
-```bash
 venv\Scripts\Activate.ps1
 ```
 
-**Linux/MacOS:**
+Linux/macOS:
 ```bash
+python -m venv venv
 source venv/bin/activate
 ```
 
-### 4. Instalar dependencias
+### 3. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## ⚙️ Configuración
-
-### 1. Crear base de datos en PostgreSQL
+### 4. Create PostgreSQL database
 
 ```sql
 CREATE DATABASE tech_inventory;
 ```
 
-### 2. Configurar variables de entorno
+### 5. Configure environment
 
-Copiar archivo de ejemplo:
 ```bash
 cp .env.example .env
 ```
 
-Editar `.env` con tus credenciales:
+## Environment Variables
+
+Example .env:
 
 ```env
-# Base de datos
-DATABASE_URL=postgresql+psycopg2://postgres:tu_contraseña@localhost:5432/tech_inventory
-
-# Seguridad JWT
-SECRET_KEY=tu_clave_secreta_super_segura_cambiar_en_produccion
+DATABASE_URL=postgresql+psycopg2://postgres:your_password@localhost:5432/tech_inventory
+SECRET_KEY=your_strong_secret_key
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
 
-**Importante**: En producción, cambiar `SECRET_KEY` a una cadena aleatoria segura.
+Variable reference:
+- DATABASE_URL: SQLAlchemy database connection string
+- SECRET_KEY: key used to sign JWT tokens
+- ALGORITHM: JWT signing algorithm (HS256)
+- ACCESS_TOKEN_EXPIRE_MINUTES: token lifetime in minutes
 
-## ▶️ Ejecutar la Aplicación
+## Run the API
 
-### Desarrollo (con hot-reload)
+Development mode:
 
 ```bash
 uvicorn main:app --reload
 ```
 
-### Producción
+Application URLs:
+- http://localhost:8000
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
 
-```bash
-uvicorn main:app --host 0.0.0.0 --port 8000
+## Authentication
+
+1. Register user via POST /users
+2. Login via POST /auth/login
+3. Send token as:
+
+```text
+Authorization: Bearer <access_token>
 ```
 
-La API estará disponible en: **http://localhost:8000**
+Sample login response:
 
-## 📚 Documentación Interactiva
-
-Una vez ejecutada la API, acceder a:
-
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-## 🏗️ Estructura del Proyecto
-
-```
-tech-inventory-api/
-├── main.py                           # Punto de entrada de la aplicación
-├── requirements.txt                  # Dependencias del proyecto
-├── .env.example                      # Plantilla de variables de entorno
-├── .gitignore
-├── README.md                         # Este archivo
-│
-├── core/                            # Módulo de configuración base
-│   ├── __init__.py
-│   ├── database.py                  # Configuración SQLAlchemy y conexión BD
-│   └── security.py                  # Utilidades JWT para autenticación
-│
-├── models/                          # Modelos de base de datos (SQLAlchemy)
-│   ├── __init__.py
-│   ├── user_model.py                # Modelo de usuarios
-│   ├── product_model.py             # Modelo de productos
-│   ├── inventory_movement_model.py  # Modelo de movimientos de inventario
-│   └── sale_model.py                # Modelos de ventas y detalles
-│
-├── schemas/                         # Esquemas Pydantic (validación/respuesta)
-│   ├── __init__.py
-│   ├── user_schema.py               # Esquemas de usuarios
-│   ├── product_schema.py            # Esquemas de productos
-│   ├── inventory_movement_schema.py # Esquemas de movimientos
-│   └── sale_schema.py               # Esquemas de ventas
-│
-├── services/                        # Lógica de negocio
-│   ├── __init__.py
-│   ├── user_service.py              # Servicios de usuarios
-│   ├── product_service.py           # Servicios de productos
-│   ├── inventory_movement_service.py # Servicios de movimientos
-│   └── sale_service.py              # Servicios de ventas
-│
-├── routes/                          # Rutas API (endpoints)
-│   ├── __init__.py
-│   ├── auth_routes.py               # Endpoints autenticación
-│   ├── user_routes.py               # Endpoints gestión usuarios
-│   ├── product_routes.py            # Endpoints gestión productos
-│   ├── inventory_movement_routes.py # Endpoints movimientos inventario
-│   └── sale_routes.py               # Endpoints gestión ventas
-│
-└── venv/                            # Entorno virtual (no subir a git)
-```
-
-## 📡 Endpoints API
-
-### 🔐 Autenticación (Pública)
-
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| `POST` | `/auth/login` | Login y obtener JWT token |
-| `GET` | `/auth/me` | Perfil del usuario autenticado |
-
-### 👥 Usuarios (Pública/Protegida)
-
-| Método | Ruta | Descripción | Auth |
-|--------|------|-------------|------|
-| `POST` | `/users` | Crear nuevo usuario | No |
-| `GET` | `/users` | Listar todos usuarios | Sí |
-| `GET` | `/users/{user_id}` | Obtener usuario por ID | Sí |
-| `PUT` | `/users/{user_id}` | Actualizar usuario | Sí |
-| `DELETE` | `/users/{user_id}` | Eliminar usuario | Sí |
-
-### 📦 Productos (Protegida)
-
-| Método | Ruta | Descripción | Auth |
-|--------|------|-------------|------|
-| `POST` | `/products` | Crear producto | Sí |
-| `GET` | `/products` | Listar productos | Sí |
-| `GET` | `/products/{product_id}` | Obtener producto | Sí |
-| `PUT` | `/products/{product_id}` | Actualizar producto | Sí |
-| `DELETE` | `/products/{product_id}` | Eliminar producto | Sí |
-
-### 📊 Movimientos de Inventario (Protegida)
-
-| Método | Ruta | Descripción | Auth |
-|--------|------|-------------|------|
-| `POST` | `/inventory-movements` | Registrar movimiento | Sí |
-| `GET` | `/inventory-movements` | Listar movimientos | Sí |
-| `GET` | `/inventory-movements/{movement_id}` | Obtener movimiento | Sí |
-| `GET` | `/inventory-movements/product/{product_id}` | Movimientos por producto | Sí |
-
-### 🛒 Ventas (Protegida)
-
-| Método | Ruta | Descripción | Auth |
-|--------|------|-------------|------|
-| `POST` | `/sales` | Crear venta | Sí |
-| `GET` | `/sales` | Listar ventas | Sí |
-| `GET` | `/sales/{sale_id}` | Obtener venta | Sí |
-
-## 🔐 Autenticación
-
-### 1. Registrarse (Crear Usuario)
-
-```bash
-POST /users
-Content-Type: application/json
-
-{
-  "name": "Steven Loor",
-  "email": "steven@example.com",
-  "password": "SecurePassword123!"
-}
-```
-
-### 2. Login
-
-```bash
-POST /auth/login
-Content-Type: application/json
-
-{
-  "email": "steven@example.com",
-  "password": "SecurePassword123!"
-}
-```
-
-**Respuesta:**
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer"
+    "access_token": "<jwt>",
+    "token_type": "bearer"
 }
 ```
 
-### 3. Usar Token en Endpoints Protegidos
+## Role and Permission Matrix
 
-Incluir en header:
+| Module | admin | seller | warehouse |
+|---|---|---|---|
+| Users management | Yes | No | No |
+| Product create/update/delete | Yes | No | Yes |
+| Product read | Yes | Yes | Yes |
+| Inventory movements | Yes | No | Yes |
+| Sales | Yes | Yes | No |
+| Reports | Yes | No | No |
+
+## API Endpoints
+
+### Auth
+- POST /auth/login
+- GET /auth/me
+
+### Users
+- POST /users (public signup)
+- GET /users (admin)
+- GET /users/{user_id} (admin)
+- PUT /users/{user_id} (admin)
+- DELETE /users/{user_id} (admin)
+
+### Products
+- POST /products (admin, warehouse)
+- GET /products (authenticated)
+- GET /products/{product_id} (authenticated)
+- PUT /products/{product_id} (admin, warehouse)
+- DELETE /products/{product_id} (admin, warehouse)
+
+### Inventory Movements
+- POST /inventory-movements (admin, warehouse)
+- GET /inventory-movements (admin, warehouse)
+- GET /inventory-movements/{movement_id} (admin, warehouse)
+- GET /inventory-movements/product/{product_id} (admin, warehouse)
+
+### Sales
+- POST /sales (admin, seller)
+- GET /sales (admin, seller)
+- GET /sales/{sale_id} (admin, seller)
+
+### Reports (admin)
+- GET /reports/dashboard-overview
+- GET /reports/sales-summary?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
+- GET /reports/top-products?limit=5&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
+- GET /reports/low-stock?threshold=5
+
+## Business Rules
+
+### User Rules
+- Email must be unique
+- Password is stored hashed
+- Public signup cannot escalate role (always seller)
+
+### Product Rules
+- SKU must be unique
+- Price must be greater than 0
+- Stock cannot be negative
+
+### Inventory Movement Rules
+- Allowed movement types: in, out
+- Quantity must be greater than 0
+- Out movement requires enough stock
+
+### Sales Rules
+- A sale must include at least one item
+- Every sale item product must exist
+- Every sale item quantity must be greater than 0
+- Discount cannot exceed subtotal
+- Stock is deducted atomically with sale registration
+- Out movements are created for traceability
+
+## Reports and Dashboard
+
+Available analytics:
+- Sales count, revenue, and average ticket
+- Top products by sold quantity and total revenue
+- Low stock monitoring by configurable threshold
+- Daily and global dashboard KPIs
+
+Date filtering behavior:
+- start_date and end_date are optional
+- If omitted, reports run over all available data
+
+## Response and Error Conventions
+
+Common success codes:
+- 200 OK: read operations
+- 201 Created: create operations
+
+Common error codes:
+- 400 Bad Request: validation or business rule violations
+- 401 Unauthorized: missing or invalid token
+- 403 Forbidden: authenticated but insufficient role
+- 404 Not Found: missing resources
+
+Typical error payload:
+
+```json
+{
+    "detail": "Error message"
+}
 ```
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
 
-## 📖 Ejemplos de Uso
+## Operational Notes
 
-### Crear Producto
+- Existing databases are backward-compatible for user roles through startup check (ensure_user_role_column)
+- Base.metadata.create_all(...) is used for table creation
+- For production-grade schema evolution, add Alembic migrations
+- Keep SECRET_KEY private and rotate it per environment
+
+## Example cURL
+
+Create product:
 
 ```bash
 curl -X POST http://localhost:8000/products \
-  -H "Authorization: Bearer TU_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "iPhone 15 Pro",
-    "category": "Smartphones",
-    "brand": "Apple",
-    "sku": "IPHONE15PRO001",
-    "price": 999.99,
-    "stock": 50
-  }'
+    -H "Authorization: Bearer <token>" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "name": "iPhone 15 Pro",
+        "category": "Smartphones",
+        "brand": "Apple",
+        "sku": "IPHONE15PRO001",
+        "price": 999.99,
+        "stock": 25
+    }'
 ```
 
-### Registrar Movimiento de Entrada
-
-```bash
-curl -X POST http://localhost:8000/inventory-movements \
-  -H "Authorization: Bearer TU_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_id": 1,
-    "movement_type": "in",
-    "quantity": 20,
-    "note": "Compra a proveedor ABC"
-  }'
-```
-
-### Crear Venta
+Create sale:
 
 ```bash
 curl -X POST http://localhost:8000/sales \
-  -H "Authorization: Bearer TU_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "discount": 50.00,
-    "items": [
-      {
-        "product_id": 1,
-        "quantity": 2
-      },
-      {
-        "product_id": 2,
-        "quantity": 1
-      }
-    ]
-  }'
+    -H "Authorization: Bearer <token>" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "discount": 10,
+        "items": [
+            {"product_id": 1, "quantity": 2},
+            {"product_id": 2, "quantity": 1}
+        ]
+    }'
 ```
 
-## 🔄 Flujo de Ventas
-
-1. **Crear venta** con ítems
-2. **Sistema valida**:
-   - Productos existen
-   - Stock disponible por producto
-   - Descuento no excede subtotal
-3. **Sistema actualiza**:
-   - Stock de cada producto (resta)
-   - Crea registro de venta
-   - Registra detalle de cada ítem
-   - Crea movimientos de inventario tipo "out"
-4. **Respuesta** incluye venta completa con detalles
-
-## 🛠️ Stack Tecnológico
-
-| Tecnología | Versión | Propósito |
-|------------|---------|----------|
-| FastAPI | 0.104+ | Framework web |
-| Python | 3.13+ | Lenguaje |
-| PostgreSQL | 14+ | Base de datos |
-| SQLAlchemy | 2.0+ | ORM |
-| Pydantic | 2.0+ | Validación datos |
-| python-jose | 3.3+ | JWT tokens |
-| passlib | 1.7+ | Hash contraseñas |
-| uvicorn | 0.24+ | Servidor ASGI |
-| python-dotenv | 1.0+ | Variables entorno |
-
-## 📦 Dependencias
-
-Ver `requirements.txt` para lista completa:
-
-```
-fastapi
-uvicorn
-sqlalchemy
-psycopg2-binary
-passlib[bcrypt]
-pydantic[email]
-python-dotenv
-python-jose[cryptography]
-```
-
-## 🚦 Próximas Features (Roadmap)
-
-- [ ] Refresh tokens y logout
-- [ ] Roles y permisos (admin, vendedor, bodeguero)
-- [ ] Reportes de ventas
-- [ ] Dashboard con métricas
-- [ ] Categorías dinámicas
-- [ ] Proveedores y órdenes de compra
-- [ ] Devoluciones de ventas
-- [ ] Alertas de stock bajo
-- [ ] Búsqueda y filtros avanzados
-- [ ] Rate limiting
-- [ ] Tests automatizados
-- [ ] CI/CD pipeline
-
-## 🧪 Testing
-
-(En desarrollo) Para ejecutar tests:
+Get dashboard overview:
 
 ```bash
-pytest
+curl -X GET "http://localhost:8000/reports/dashboard-overview" \
+    -H "Authorization: Bearer <admin_token>"
 ```
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
-### Error: "DATABASE_URL is not configured"
+DATABASE_URL is not configured:
+- Ensure .env exists in project root
+- Ensure DATABASE_URL is defined
 
-Asegurar que `.env` existe y tiene `DATABASE_URL` definida.
+PostgreSQL connection refused:
+- Ensure PostgreSQL service is running
+- Validate credentials, host, and port
 
-### Error: "connection refused" en PostgreSQL
+Port 8000 already in use:
 
-Verificar que PostgreSQL está corriendo:
-- Windows: Services → PostgreSQL → Iniciar
-- Linux: `sudo systemctl start postgresql`
-
-### Error: "port 8000 already in use"
-
-Cambiar puerto:
 ```bash
-uvicorn main:app --port 8001 --reload
+uvicorn main:app --reload --port 8001
 ```
 
-## 📝 Convenciones de Código
+## Roadmap
 
-- **Nombres**: snake_case para variables/funciones, PascalCase para clases
-- **Docstrings**: Documentar funciones importantes
-- **Type hints**: Usados en parámetros y retornos
-- **Commits**: Semantic versioning (feat: ..., fix: ..., etc)
+- Refresh token and logout
+- Advanced filtering, sorting, and pagination
+- Automated tests and CI pipeline
+- Alembic migrations
+- Purchase orders and suppliers
+- Returns and refunds
+- Observability (metrics and logging)
+- Docker and deployment profiles
 
-## 🤝 Contribuciones
+## Author
 
-Las contribuciones son bienvenidas. Por favor:
+Steven Loor  
+GitHub: https://github.com/Steeven24
 
-1. Fork el proyecto
-2. Crear rama feature: `git checkout -b feature/nueva-feature`
-3. Commit cambios: `git commit -m "feat: descripción"`
-4. Push rama: `git push origin feature/nueva-feature`
-5. Abrir Pull Request
+Last updated: March 29, 2026
+# Tech Inventory API
 
-## 📄 Licencia
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009485?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
+[![Python](https://img.shields.io/badge/Python-3.13+-3776ab?style=for-the-badge&logo=python)](https://www.python.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-336791?style=for-the-badge&logo=postgresql)](https://www.postgresql.org)
+[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-d52b1e?style=for-the-badge)](https://www.sqlalchemy.org)
 
-Este proyecto está bajo licencia MIT. Ver `LICENSE` para más detalles.
+A production-oriented RESTful API for managing inventory, stock movements, and sales of technology products (phones, computers, and consoles), built with FastAPI, PostgreSQL, and SQLAlchemy.
 
-## 👤 Autor
+## Table of Contents
 
-**Steven Loor** - [@Steeven24](https://github.com/Steeven24)
+- [Overview](#overview)
+- [Business Scope](#business-scope)
+- [Feature Set](#feature-set)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Quick Start](#quick-start)
+- [Environment Variables](#environment-variables)
+- [Run the API](#run-the-api)
+- [Authentication](#authentication)
+- [Role and Permission Matrix](#role-and-permission-matrix)
+- [API Endpoints](#api-endpoints)
+- [Business Rules](#business-rules)
+- [Reports and Dashboard](#reports-and-dashboard)
+- [Response and Error Conventions](#response-and-error-conventions)
+- [Operational Notes](#operational-notes)
+- [Troubleshooting](#troubleshooting)
+- [Roadmap](#roadmap)
+- [Author](#author)
 
----
+## Overview
 
-## 📞 Soporte
+Tech Inventory API centralizes operational workflows for a small-to-medium technology business:
+- User authentication and access control
+- Product catalog and stock lifecycle
+- Sales registration with inventory impact
+- Reporting for daily operation and management decisions
 
-Para problemas o sugerencias, abrir un issue en el repositorio.
+The API is designed around clear modules (routes -> services -> models) and enforces domain constraints such as SKU uniqueness, stock integrity, and role-based authorization.
 
-**Last Updated**: Marzo 29, 2026
+## Business Scope
+
+This backend supports end-to-end inventory and sales operations:
+- Product onboarding and maintenance
+- Incoming/outgoing inventory movements
+- Sales transactions with multiple line items
+- Dashboard KPIs and report queries for decision-making
+- Segregation of duties through roles: `admin`, `seller`, `warehouse`
+
+## Feature Set
+
+### Authentication and Authorization
+- Public signup and secure login
+- JWT access token flow (`Bearer`)
+- Password hashing with bcrypt (`passlib`)
+- Role-based access control via reusable permission dependency
+
+### User Management
+- CRUD operations for users
+- Role support: `admin`, `seller`, `warehouse`
+- Public signup hardening: role is forced to `seller`
+
+### Product Management
+- Product CRUD
+- Unique SKU validation
+- Required fields: name, category, brand, SKU, price, stock
+
+### Sales
+- Multi-item sales creation
+- Discount support at sale level
+- Automatic subtotal and total calculation
+- Automatic stock deduction by sale item
+- Automatic `out` inventory movement audit per sale line
+
+### Inventory Movements
+- Manual stock movement registration (`in` / `out`)
+- Validation to prevent negative stock
+- Product-level movement history
+
+### Reports and Dashboard
+- Sales summary in optional date range
+- Top-selling products by quantity and revenue
+- Low stock report with configurable threshold
+- Dashboard overview metrics for operations
+
+## Architecture
+
+Layered architecture:
+- `routes/`: transport layer (HTTP contracts, dependency wiring, access policy)
+- `services/`: business logic and validation rules
+- `models/`: persistence models (SQLAlchemy)
+- `schemas/`: request/response contracts (Pydantic)
+- `core/`: database/session setup and JWT utilities
+
+Design principles used:
+- Thin routes, explicit service layer
+- Clear separation between persistence and API schemas
+- Consistent role checks at route boundaries
+- Auditability through inventory movement logs
+
+## Tech Stack
+
+- Python 3.13+
+- FastAPI
+- PostgreSQL
+- SQLAlchemy
+- Pydantic
+- python-jose (JWT)
+- passlib (bcrypt)
+- python-dotenv
+- uvicorn
+
+## Project Structure
+
+```text
+tech-inventory-api/
+├── main.py
+├── requirements.txt
+├── .env.example
+├── README.md
+├── core/
+│   ├── database.py
+│   └── security.py
+├── models/
+│   ├── user_model.py
+│   ├── product_model.py
+│   ├── inventory_movement_model.py
+│   └── sale_model.py
+├── schemas/
+│   ├── auth_schema.py
+│   ├── user_schema.py
+│   ├── product_schema.py
+│   ├── inventory_movement_schema.py
+│   ├── sale_schema.py
+│   └── report_schema.py
+├── services/
+│   ├── user_service.py
+│   ├── product_service.py
+│   ├── inventory_movement_service.py
+│   ├── sale_service.py
+│   └── report_service.py
+└── routes/
+    ├── auth_routes.py
+## Quick Start
+    ├── product_routes.py
+### 1. Clone repository
+    ├── sale_routes.py
+    └── report_routes.py
+```
+
+## Setup
+
+### 2. Create and activate virtual environment
+
+```bash
+git clone https://github.com/Steeven24/tech-inventory-api.git
+cd tech-inventory-api
+```
+
+### 2. Create and activate virtual environment
+
+Windows:
+```bash
+python -m venv venv
+venv\Scripts\Activate.ps1
+```
+
+Linux/macOS:
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Create PostgreSQL database
+
+```sql
+CREATE DATABASE tech_inventory;
+```
+
+### 5. Configure environment
+
+Copy:
+```bash
+cp .env.example .env
+```
+
+## Environment Variables
+
+Example `.env`:
+
+```env
+DATABASE_URL=postgresql+psycopg2://postgres:your_password@localhost:5432/tech_inventory
+SECRET_KEY=your_strong_secret_key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+```
+
+Variable reference:
+- `DATABASE_URL`: SQLAlchemy database connection string
+- `SECRET_KEY`: key used to sign JWT tokens
+- `ALGORITHM`: JWT signing algorithm (`HS256`)
+- `ACCESS_TOKEN_EXPIRE_MINUTES`: token lifetime in minutes
+
+## Run the API
+
+Development mode:
+
+```bash
+uvicorn main:app --reload
+```
+
+Application URLs:
+- http://localhost:8000
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+## Authentication
+
+1. Register user via `POST /users`
+2. Login via `POST /auth/login`
+3. Send token as:
+
+```text
+Authorization: Bearer <access_token>
+```
+
+Sample login response:
+
+```json
+{
+    "access_token": "<jwt>",
+    "token_type": "bearer"
+}
+```
+
+## Role and Permission Matrix
+
+| Module | admin | seller | warehouse |
+|---|---|---|---|
+| Users management | Yes | No | No |
+| Product create/update/delete | Yes | No | Yes |
+| Product read | Yes | Yes | Yes |
+| Inventory movements | Yes | No | Yes |
+| Sales | Yes | Yes | No |
+| Reports | Yes | No | No |
+
+## API Endpoints
+
+### Auth
+- POST /auth/login
+- GET /auth/me
+
+### Users
+- POST /users (public signup)
+- GET /users (admin)
+- GET /users/{user_id} (admin)
+- PUT /users/{user_id} (admin)
+- DELETE /users/{user_id} (admin)
+
+### Products
+- POST /products (admin, warehouse)
+- GET /products (authenticated)
+- GET /products/{product_id} (authenticated)
+- PUT /products/{product_id} (admin, warehouse)
+- DELETE /products/{product_id} (admin, warehouse)
+
+### Inventory Movements
+- POST /inventory-movements (admin, warehouse)
+- GET /inventory-movements (admin, warehouse)
+- GET /inventory-movements/{movement_id} (admin, warehouse)
+- GET /inventory-movements/product/{product_id} (admin, warehouse)
+
+### Sales
+- POST /sales (admin, seller)
+- GET /sales (admin, seller)
+- GET /sales/{sale_id} (admin, seller)
+
+### Reports (admin)
+- GET /reports/dashboard-overview
+- GET /reports/sales-summary?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
+- GET /reports/top-products?limit=5&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
+- GET /reports/low-stock?threshold=5
+
+## Business Rules
+
+### User Rules
+- Email must be unique
+- Password is stored hashed
+- Public signup cannot escalate role (always `seller`)
+
+### Product Rules
+- SKU must be unique
+- Price must be greater than 0
+- Stock cannot be negative
+
+### Inventory Movement Rules
+- Movement types allowed: `in`, `out`
+- Quantity must be > 0
+- `out` movement requires enough stock
+
+### Sales Rules
+- A sale must include at least one item
+- Every item product must exist
+- Every item quantity must be > 0
+- Discount cannot exceed subtotal
+- Stock is deducted atomically with sale registration
+- Out movements are created for traceability
+
+## Reports and Dashboard
+
+Available analytics:
+- Sales count, revenue, and average ticket
+- Top products by sold quantity and total revenue
+- Low stock monitoring by configurable threshold
+- Daily and global dashboard KPIs
+
+Date filtering behavior:
+- `start_date` and `end_date` are optional
+- If omitted, reports run over all available data
+
+## Response and Error Conventions
+
+Common success codes:
+- `200 OK`: read operations
+- `201 Created`: create operations
+
+Common error codes:
+- `400 Bad Request`: validation or business rule violations
+- `401 Unauthorized`: missing/invalid token
+- `403 Forbidden`: authenticated but insufficient role
+- `404 Not Found`: missing resources
+
+Typical error payload:
+
+```json
+{
+    "detail": "Error message"
+}
+```
+
+## Operational Notes
+
+- Existing databases are backward-compatible for user roles through startup check (`ensure_user_role_column`)
+- `Base.metadata.create_all(...)` is used for table creation
+- For production-grade schema evolution, adding Alembic migrations is strongly recommended
+- Keep `SECRET_KEY` private and rotate it per environment
+
+## Example cURL
+
+Create product:
+
+```bash
+curl -X POST http://localhost:8000/products \
+    -H "Authorization: Bearer <token>" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "name": "iPhone 15 Pro",
+        "category": "Smartphones",
+        "brand": "Apple",
+        "sku": "IPHONE15PRO001",
+        "price": 999.99,
+        "stock": 25
+    }'
+```
+
+Create sale:
+
+```bash
+curl -X POST http://localhost:8000/sales \
+    -H "Authorization: Bearer <token>" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "discount": 10,
+        "items": [
+            {"product_id": 1, "quantity": 2},
+            {"product_id": 2, "quantity": 1}
+        ]
+    }'
+```
+
+Fetch dashboard:
+
+```bash
+curl -X GET "http://localhost:8000/reports/dashboard-overview" \
+    -H "Authorization: Bearer <admin_token>"
+```
+
+## Troubleshooting
+
+DATABASE_URL is not configured:
+- Ensure .env exists in project root
+- Ensure DATABASE_URL is defined
+
+PostgreSQL connection refused:
+- Ensure PostgreSQL service is running
+- Validate credentials, host, and port
+
+Port 8000 already in use:
+
+```bash
+uvicorn main:app --reload --port 8001
+```
+
+## Roadmap
+
+- Refresh token and logout
+- Advanced filtering, sorting, and pagination
+- Automated tests and CI pipeline
+- Alembic migrations
+- Purchase orders and suppliers
+- Returns and refunds
+- Observability (metrics/logging)
+- Docker and deployment profiles
+
+## License
+
+This project is intended for portfolio and educational use unless otherwise specified by the repository owner.
+
+## Author
+
+Steven Loor
+GitHub: https://github.com/Steeven24
+
+Last updated: March 29, 2026
