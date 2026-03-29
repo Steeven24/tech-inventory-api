@@ -1,5 +1,7 @@
 from conftest import get_auth_headers
 
+API_PREFIX = "/api/v1"
+
 
 def test_root_health(client):
     response = client.get("/")
@@ -10,7 +12,7 @@ def test_root_health(client):
 
 def test_public_signup_forces_seller_role(client):
     signup_response = client.post(
-        "/users",
+        f"{API_PREFIX}/users",
         json={
             "name": "New User",
             "email": "new-user@test.com",
@@ -23,7 +25,7 @@ def test_public_signup_forces_seller_role(client):
     assert signup_response.json()["role"] == "seller"
 
     headers = get_auth_headers(client, "new-user@test.com", "Secure123!")
-    me_response = client.get("/auth/me", headers=headers)
+    me_response = client.get(f"{API_PREFIX}/auth/me", headers=headers)
 
     assert me_response.status_code == 200
     assert me_response.json()["role"] == "seller"
@@ -32,7 +34,7 @@ def test_public_signup_forces_seller_role(client):
 def test_seller_cannot_access_admin_reports(client, seller_user):
     headers = get_auth_headers(client, seller_user.email, "Seller123!")
 
-    response = client.get("/reports/dashboard-overview", headers=headers)
+    response = client.get(f"{API_PREFIX}/reports/dashboard-overview", headers=headers)
 
     assert response.status_code == 403
 
@@ -40,7 +42,7 @@ def test_seller_cannot_access_admin_reports(client, seller_user):
 def test_admin_can_access_admin_reports(client, admin_user):
     headers = get_auth_headers(client, admin_user.email, "Admin123!")
 
-    response = client.get("/reports/dashboard-overview", headers=headers)
+    response = client.get(f"{API_PREFIX}/reports/dashboard-overview", headers=headers)
 
     assert response.status_code == 200
     data = response.json()
