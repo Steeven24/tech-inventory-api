@@ -19,6 +19,7 @@ from models.user_model import User  # noqa: E402
 from services.user_service import pwd_context  # noqa: E402
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+API_PREFIX = "/api/v1"
 
 
 @pytest.fixture(autouse=True)
@@ -82,7 +83,7 @@ def seller_user(db_session):
 
 def get_auth_headers(client: TestClient, email: str, password: str) -> dict[str, str]:
     response = client.post(
-        "/auth/login",
+        f"{API_PREFIX}/auth/login",
         json={"email": email, "password": password},
     )
     assert response.status_code == 200
