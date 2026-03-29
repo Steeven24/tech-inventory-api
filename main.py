@@ -14,24 +14,25 @@ from routes.user_routes import router as user_router
 
 API_NAME = "Tech Inventory API"
 API_VERSION = "1.0.0"
+API_PREFIX = "/api/v1"
 
 app = FastAPI(title=API_NAME, version=API_VERSION)
 
 Base.metadata.create_all(bind=engine)
 ensure_user_role_column()
 
-app.include_router(user_router)
-app.include_router(auth_router)
-app.include_router(product_router)
-app.include_router(inventory_movement_router)
-app.include_router(sale_router)
-app.include_router(report_router)
+app.include_router(user_router, prefix=API_PREFIX)
+app.include_router(auth_router, prefix=API_PREFIX)
+app.include_router(product_router, prefix=API_PREFIX)
+app.include_router(inventory_movement_router, prefix=API_PREFIX)
+app.include_router(sale_router, prefix=API_PREFIX)
+app.include_router(report_router, prefix=API_PREFIX)
 
 @app.get("/")
 def root():
     return {"message": "API working"}
 
 
-@app.get("/version", tags=["Versioning"])
+@app.get(f"{API_PREFIX}/version", tags=["Versioning"])
 def get_api_version():
     return {"name": API_NAME, "version": API_VERSION}
