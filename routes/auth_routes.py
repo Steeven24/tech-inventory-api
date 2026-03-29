@@ -39,6 +39,18 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     return user
 
 
+def require_roles(*allowed_roles: str):
+    def role_dependency(current_user=Depends(get_current_user)):
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to perform this action",
+            )
+        return current_user
+
+    return role_dependency
+
+
 @router.post("/login", response_model=TokenResponse)
 def login(data: LoginRequest, db: Session = Depends(get_db)):
     user_service = UserService(db)
@@ -60,4 +72,5 @@ def me(current_user=Depends(get_current_user)):
         "id": current_user.id,
         "name": current_user.name,
         "email": current_user.email,
+        "role": current_user.role,
     }
