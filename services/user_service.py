@@ -13,6 +13,9 @@ class UserService:
     def hash_password(self, password: str) -> str:
         return pwd_context.hash(password)
 
+    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
+        return pwd_context.verify(plain_password, hashed_password)
+
     def _sanitize_user(self, user: User) -> dict:
         return {
             "id": user.id,
@@ -47,6 +50,19 @@ class UserService:
     def get_users(self):
         users = self.db.query(User).all()
         return [self._sanitize_user(user) for user in users]
+
+    def get_user_by_email(self, email: str) -> User | None:
+        return self.db.query(User).filter(User.email.ilike(email)).first()
+
+    def authenticate_user(self, email: str, password: str) -> User | None:
+        user = self.get_user_by_email(email)
+        if user is None:
+            return None
+
+        if not self.verify_password(password, user.password):
+            return None
+
+        return user
 
     def get_user_by_id(self, user_id: int):
         user = self.db.query(User).filter(User.id == user_id).first()
